@@ -1,8 +1,7 @@
 import json
-import os
 from typing import List, Dict, Any
 from openai import OpenAI
-from config import LLM_MODEL
+from config import LLM_MODEL, OPENROUTER_API_KEY
 
 def call_llm_json(
     messages: List[Dict[str, Any]], 
@@ -23,10 +22,9 @@ def call_llm_json(
     Raises:
         ValueError: If the LLM response cannot be parsed as valid JSON.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
+        api_key=OPENROUTER_API_KEY,
     )
 
     response = client.chat.completions.create(

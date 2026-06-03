@@ -2,12 +2,8 @@ import json
 import os
 import base64
 import fitz  # PyMuPDF
-from dotenv import load_dotenv
 from llm import call_llm_json
 from config import LLM_MODEL
-
-# Load environment variables from .env file
-load_dotenv()
 
 from prompts import BANK_ACCOUNT_SYSTEM_PROMPT
 

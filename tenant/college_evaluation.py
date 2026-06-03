@@ -26,12 +26,8 @@ Output JSON format:
 import json
 import os
 import sys
-from dotenv import load_dotenv
 from llm import call_llm_json
 from config import LLM_MODEL
-
-# Load environment variables from .env file
-load_dotenv()
 
 from prompts import COLLEGE_SYSTEM_PROMPT, COLLEGE_USER_PROMPT_TEMPLATE
 

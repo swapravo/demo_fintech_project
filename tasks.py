@@ -1,18 +1,13 @@
 import os
 import sys
 from celery import Celery
-from dotenv import load_dotenv
 
 # Ensure project root is in sys.path for celery workers
 project_root = os.path.abspath(os.path.dirname(__file__))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Load env variables (like OPENROUTER_API_KEY)
-load_dotenv()
-
-# Get Redis URL from environment, default to localhost
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+from config import REDIS_URL
 
 # Initialize Celery application
 celery_app = Celery("tasks", broker=REDIS_URL, backend=REDIS_URL)

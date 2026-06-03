@@ -20,12 +20,8 @@ Salary Tier (annual CTC in LPA — Lakhs Per Annum):
 """
 import json
 import os
-from dotenv import load_dotenv
 from llm import call_llm_json
 from config import LLM_MODEL
-
-# Load environment variables from .env file
-load_dotenv()
 # Client is instantiated lazily inside evaluate_offer_letter() so that
 # importing this module never raises a missing-credentials error.
 
