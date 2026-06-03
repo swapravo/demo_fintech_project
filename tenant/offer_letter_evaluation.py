@@ -28,56 +28,7 @@ load_dotenv()
 # Client is instantiated lazily inside evaluate_offer_letter() so that
 # importing this module never raises a missing-credentials error.
 
-# ---------------------------------------------------------------------------
-# System prompt
-# ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are an expert HR analyst and compensation benchmarking specialist.
-Your job is to evaluate an offer letter and return a structured JSON object.
-
-You must determine two independent tiers:
-
-### 1. Company Tier
-Assess the *hiring company* mentioned in the offer letter:
-
-| Tier | Description | Examples |
-|------|-------------|---------|
-| 1    | Top-tier, globally recognised companies — MAANG, FAANG, elite consulting/finance firms, Fortune 100 companies | Google, Meta, Apple, Amazon, Netflix, Microsoft, Goldman Sachs, McKinsey, OpenAI, Stripe |
-| 2    | Mid-sized, established companies with a recognisable brand, ~100+ employees, revenue roughly $1M–$100M | Well-known regional tech firms, Series B/C startups, established SMEs |
-| 3    | Unknown, very small, or early-stage companies with tiny / unverifiable revenue | Unknown startups, sole proprietorships, companies with < 10 employees |
-
-### 2. Salary Tier
-Extract the annual CTC (Cost to Company) from the offer letter. Assume figures are in INR (Indian Rupees) unless stated otherwise. Convert to LPA (Lakhs Per Annum) as needed.
-
-| Tier | Annual CTC (LPA) |
-|------|-----------------|
-| 1    | >= 10 LPA       |
-| 2    | >= 4 LPA and < 10 LPA |
-| 3    | < 4 LPA         |
-
-### Output Format
-Return ONLY a valid JSON object — no markdown, no explanation, no extra text:
-{
-  "company_tier": <1 | 2 | 3>,
-  "salary_tier": <1 | 2 | 3>,
-  "company_name": "<extracted company name>",
-  "annual_ctc_lpa": <numeric value or null if not found>,
-  "reasoning": {
-    "company": "<one sentence explaining the company tier decision>",
-    "salary": "<one sentence explaining the salary tier decision>"
-  }
-}
-"""
-
-# ---------------------------------------------------------------------------
-# User prompt template
-# ---------------------------------------------------------------------------
-USER_PROMPT_TEMPLATE = """Below is the full text extracted from an offer letter.
-Evaluate it and return the JSON as instructed.
-
---- OFFER LETTER TEXT START ---
-{offer_letter_text}
---- OFFER LETTER TEXT END ---
-"""
+from prompts import OFFER_LETTER_SYSTEM_PROMPT, OFFER_LETTER_USER_PROMPT_TEMPLATE
 
 
 def evaluate_offer_letter(offer_letter_text: str, model: str = "openai/gpt-4o") -> dict:
@@ -109,12 +60,12 @@ def evaluate_offer_letter(offer_letter_text: str, model: str = "openai/gpt-4o") 
         api_key=api_key,
     )
 
-    user_message = USER_PROMPT_TEMPLATE.format(offer_letter_text=offer_letter_text)
+    user_message = OFFER_LETTER_USER_PROMPT_TEMPLATE.format(offer_letter_text=offer_letter_text)
 
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": OFFER_LETTER_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
         temperature=0,  # deterministic output for structured extraction

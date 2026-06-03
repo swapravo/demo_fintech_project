@@ -8,35 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-SYSTEM_PROMPT = """You are an expert financial analyst.
-Your job is to analyze the provided bank statement images and determine the credibility tiers for the account based on three metrics.
-
-### Tier Definitions
-
-1. Age of Account:
-   - Tier 1: > 2 years
-   - Tier 2: 6 months to 2 years
-   - Tier 3: < 6 months (or < 3 months)
-
-2. Transaction Frequency (per month / overall in the statement):
-   - Tier 1: > 30 transactions
-   - Tier 2: 10 - 30 transactions
-   - Tier 3: < 10 transactions
-
-3. Transaction Volume (total value of transactions):
-   - Tier 1: > 100k
-   - Tier 2: 50k - 100k
-   - Tier 3: < 50k
-
-### Output Format
-Based on the bank statement, determine the appropriate tier (1, 2, or 3) for each metric.
-Return ONLY a valid JSON object — no markdown, no explanation, no extra text:
-{
-  "age_of_account": <1, 2, or 3>,
-  "transaction_frequency": <1, 2, or 3>,
-  "transaction_volume": <1, 2, or 3>
-}
-"""
+from prompts import BANK_ACCOUNT_SYSTEM_PROMPT
 
 def pdf_to_base64_images(pdf_path: str) -> list[str]:
     """
@@ -87,7 +59,7 @@ def evaluate_bank_account(pdf_path: str, model: str = "openai/gpt-4o") -> dict:
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": BANK_ACCOUNT_SYSTEM_PROMPT},
             {"role": "user", "content": content_list},
         ],
         temperature=0,

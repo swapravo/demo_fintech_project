@@ -32,44 +32,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# System prompt
-# ---------------------------------------------------------------------------
-SYSTEM_PROMPT = """You are an expert academic evaluator and credentials assessment specialist.
-Your job is to evaluate a college or university name and return a structured JSON object assessing its tier and credibility.
-
-### Evaluation Rules
-
-1. **Credibility Score (0 to 9)**
-   Assign a score from 0 to 9 based on the institution's prestige, ranking, and recognition:
-   - **7 to 9**: Elite institutions. Top 200 colleges or schools globally or nationally (e.g., Ivy League, Stanford, MIT, IITs, IIMs, IISc, top national public universities).
-   - **4 to 6**: Mid-tier institutions. Solid private universities, established regional state universities, and reputable mid-tier colleges (e.g., VIT, Manipal, Amity, decent state engineering/arts colleges).
-   - **0 to 3**: Not well-known or lower-tier institutions. Small local colleges, community colleges with low visibility, unaccredited universities, or newly established unrecognized colleges.
-
-2. **College Tier (1 to 3)**
-   Map the Credibility Score to a College Tier as follows:
-   - **Tier 1**: If Credibility Score is 7, 8, or 9.
-   - **Tier 2**: If Credibility Score is 4, 5, or 6.
-   - **Tier 3**: If Credibility Score is 0, 1, 2, or 3.
-
-### Output Format
-Return ONLY a valid JSON object — no markdown, no explanation, no extra text:
-{
-  "college_name": "<identified/canonical college name>",
-  "credibility_score": <integer from 0 to 9>,
-  "college_tier": <1 | 2 | 3>,
-  "reasoning": "<one sentence explaining the credibility score and tier assignment>"
-}
-"""
-
-# ---------------------------------------------------------------------------
-# User prompt template
-# ---------------------------------------------------------------------------
-USER_PROMPT_TEMPLATE = """Below is the name of a college or university.
-Evaluate it and return the JSON as instructed.
-
-College/University Name: {college_name}
-"""
+from prompts import COLLEGE_SYSTEM_PROMPT, COLLEGE_USER_PROMPT_TEMPLATE
 
 
 def evaluate_college(college_name: str, model: str = "openai/gpt-4o") -> dict:
@@ -97,12 +60,12 @@ def evaluate_college(college_name: str, model: str = "openai/gpt-4o") -> dict:
         api_key=api_key,
     )
 
-    user_message = USER_PROMPT_TEMPLATE.format(college_name=college_name)
+    user_message = COLLEGE_USER_PROMPT_TEMPLATE.format(college_name=college_name)
 
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": COLLEGE_SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
         temperature=0,  # deterministic output for classification
