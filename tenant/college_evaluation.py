@@ -26,8 +26,8 @@ Output JSON format:
 import json
 import os
 import sys
-from openai import OpenAI
 from dotenv import load_dotenv
+from llm import call_llm_json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -54,34 +54,14 @@ def evaluate_college(college_name: str, model: str = "openai/gpt-4o") -> dict:
         ValueError: If the LLM response cannot be parsed as valid JSON.
         openai.APIError: On API communication failures.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
-    )
-
     user_message = COLLEGE_USER_PROMPT_TEMPLATE.format(college_name=college_name)
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": COLLEGE_SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ],
-        temperature=0,  # deterministic output for classification
-        response_format={"type": "json_object"},
-    )
+    messages = [
+        {"role": "system", "content": COLLEGE_SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+    ]
 
-    raw_content = response.choices[0].message.content.strip()
-
-    try:
-        result = json.loads(raw_content)
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            f"LLM returned non-JSON content.\nRaw response:\n{raw_content}"
-        ) from e
-
-    return result
+    return call_llm_json(messages=messages, model=model, temperature=0.0)
 
 
 # ---------------------------------------------------------------------------

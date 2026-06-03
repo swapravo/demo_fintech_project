@@ -2,8 +2,8 @@ import json
 import os
 import base64
 import fitz  # PyMuPDF
-from openai import OpenAI
 from dotenv import load_dotenv
+from llm import call_llm_json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,12 +38,6 @@ def evaluate_bank_account(pdf_path: str, model: str = "openai/gpt-4o") -> dict:
     Reads a bank statement PDF as images, feeds them to an LLM, 
     and returns a structured JSON with the financial tiers.
     """
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,
-    )
-
     base64_images = pdf_to_base64_images(pdf_path)
     
     content_list = [{"type": "text", "text": "Please analyze these bank statement pages."}]
@@ -56,24 +50,12 @@ def evaluate_bank_account(pdf_path: str, model: str = "openai/gpt-4o") -> dict:
             }
         })
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": BANK_ACCOUNT_SYSTEM_PROMPT},
-            {"role": "user", "content": content_list},
-        ],
-        temperature=0,
-        response_format={"type": "json_object"},
-    )
+    messages = [
+        {"role": "system", "content": BANK_ACCOUNT_SYSTEM_PROMPT},
+        {"role": "user", "content": content_list},
+    ]
 
-    raw_content = response.choices[0].message.content.strip()
-
-    try:
-        result = json.loads(raw_content)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"LLM returned non-JSON content.\nRaw response:\n{raw_content}") from e
-
-    return result
+    return call_llm_json(messages=messages, model=model, temperature=0.0)
 
 if __name__ == "__main__":
     import sys
