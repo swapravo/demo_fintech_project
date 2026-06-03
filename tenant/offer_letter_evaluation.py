@@ -144,6 +144,13 @@ def evaluate_offer_letter_from_pdf(pdf_path: str, model: str = "openai/gpt-4o") 
     Returns:
         Same dict as evaluate_offer_letter().
     """
+    # Ensure project root is in sys.path so 'ai_ocr' can be resolved
+    import sys
+    import os
+    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if project_root not in sys.path:
+        sys.path.insert(0, project_root)
+        
     from ai_ocr import extract_text_from_pdf  # local import to avoid circular deps
 
     offer_letter_text = extract_text_from_pdf(pdf_path)

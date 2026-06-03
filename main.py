@@ -1,28 +1,63 @@
+import os
+import uuid
 from fastapi import FastAPI, Depends, HTTPException
+from celery.result import AsyncResult
 from models import SubmitRequest, DocumentType
+from tasks import (
+    evaluate_bank_statement_task,
+    evaluate_offer_letter_task,
+    evaluate_college_task,
+    celery_app
+)
 
-app = FastAPI(title="Fintech Demo App")
+app = FastAPI(title="Fintech Demo App with Celery")
+
+# Ensure uploads directory exists
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/submit")
 async def submit_document(data: SubmitRequest = Depends()):
     """
-    Endpoint to submit a document along with a college name.
-    Requires either a bank account statement (PDF) or an offer letter (PDF) based on the document type.
+    Endpoint to submit an evaluation request based on document type.
+    Saves files locally (if applicable) and queues Celery tasks for tier evaluation.
     """
-    # Validation logic based on document type
-    if data.document_type == DocumentType.BANK_ACCOUNT_STATEMENT:
+    task_id = None
+
+    if data.document_type == DocumentType.COLLEGE_NAME:
+        if not data.college_name:
+            raise HTTPException(
+                status_code=400,
+                detail="College name string is required when document_type is 'college name'."
+            )
+        # Queue college evaluation
+        task = evaluate_college_task.delay(data.college_name)
+        task_id = task.id
+
+    elif data.document_type == DocumentType.BANK_ACCOUNT_STATEMENT:
         if not data.bank_account_statement:
             raise HTTPException(
                 status_code=400, 
                 detail="Bank account statement PDF is required when document_type is 'bank account statement'."
             )
-        # Check if it's a PDF
-        content_type = data.bank_account_statement.content_type
-        if content_type != "application/pdf":
+        if data.bank_account_statement.content_type != "application/pdf":
             raise HTTPException(
                 status_code=400, 
                 detail="Bank account statement must be a PDF file."
             )
+        
+        # Save file to disk
+        file_extension = ".pdf"
+        file_name = f"bank_statement_{uuid.uuid4()}{file_extension}"
+        file_path = os.path.abspath(os.path.join(UPLOAD_DIR, file_name))
+        
+        with open(file_path, "wb") as f:
+            content = await data.bank_account_statement.read()
+            f.write(content)
+        
+        # Queue bank account evaluation task
+        task = evaluate_bank_statement_task.delay(file_path)
+        task_id = task.id
             
     elif data.document_type == DocumentType.OFFER_LETTER:
         if not data.offer_letter:
@@ -30,18 +65,46 @@ async def submit_document(data: SubmitRequest = Depends()):
                 status_code=400, 
                 detail="Offer letter PDF is required when document_type is 'offer letter'."
             )
-        # Check if it's a PDF
-        content_type = data.offer_letter.content_type
-        if content_type != "application/pdf":
+        if data.offer_letter.content_type != "application/pdf":
             raise HTTPException(
                 status_code=400, 
                 detail="Offer letter must be a PDF file."
             )
+        
+        # Save file to disk
+        file_extension = ".pdf"
+        file_name = f"offer_letter_{uuid.uuid4()}{file_extension}"
+        file_path = os.path.abspath(os.path.join(UPLOAD_DIR, file_name))
+        
+        with open(file_path, "wb") as f:
+            content = await data.offer_letter.read()
+            f.write(content)
+            
+        # Queue offer letter evaluation task
+        task = evaluate_offer_letter_task.delay(file_path)
+        task_id = task.id
 
     return {
-        "message": "Submission successful",
+        "message": "Submission received and queued for evaluation.",
         "document_type": data.document_type,
-        "college_name": data.college_name,
-        "bank_account_statement_filename": data.bank_account_statement.filename if data.bank_account_statement else None,
-        "offer_letter_filename": data.offer_letter.filename if data.offer_letter else None,
+        "task_id": task_id
     }
+
+@app.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    Get the status and result of a Celery task by ID.
+    """
+    result = AsyncResult(task_id, app=celery_app)
+    response = {
+        "task_id": task_id,
+        "status": result.status,
+    }
+    
+    if result.ready():
+        if result.successful():
+            response["result"] = result.result
+        else:
+            response["error"] = str(result.result)
+            
+    return response
