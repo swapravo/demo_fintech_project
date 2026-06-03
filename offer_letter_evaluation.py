@@ -18,18 +18,15 @@ Salary Tier (annual CTC in LPA — Lakhs Per Annum):
   2 - >= 4 LPA and < 10 LPA
   3 - < 4 LPA
 """
-
 import json
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
-# Client setup — points to OpenRouter, just like the existing ai_ocr pipeline
-# ---------------------------------------------------------------------------
-client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-)
+# Load environment variables from .env file
+load_dotenv()
+# Client is instantiated lazily inside evaluate_offer_letter() so that
+# importing this module never raises a missing-credentials error.
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -103,6 +100,15 @@ def evaluate_offer_letter(offer_letter_text: str, model: str = "openai/gpt-4o") 
         ValueError: If the LLM response cannot be parsed as valid JSON.
         openai.APIError: On API communication failures.
     """
+    # ---------------------------------------------------------------------------
+    # Lazy client creation — resolved at call-time so import never fails
+    # ---------------------------------------------------------------------------
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,
+    )
+
     user_message = USER_PROMPT_TEMPLATE.format(offer_letter_text=offer_letter_text)
 
     response = client.chat.completions.create(
