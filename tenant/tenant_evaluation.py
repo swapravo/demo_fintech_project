@@ -11,13 +11,13 @@ import os
 
 from ai_ocr import extract_text_from_pdf
 from offer_letter_evaluation import evaluate_offer_letter
+from config import LLM_MODEL
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
 OFFER_LETTER_DIR = os.path.dirname(os.path.abspath(__file__))
 PDF_PATTERN = os.path.join(OFFER_LETTER_DIR, "offer_letter*.pdf")
-MODEL = "openai/gpt-4o"
 
 TIER_LABEL = {1: "★★★ Tier 1", 2: "★★☆ Tier 2", 3: "★☆☆ Tier 3"}
 
@@ -49,7 +49,7 @@ def evaluate_all_offer_letters():
 
             # Step 2: Evaluate via LLM
             print("  → Evaluating with LLM...")
-            result = evaluate_offer_letter(text, model=MODEL)
+            result = evaluate_offer_letter(text, model=LLM_MODEL)
 
             # Step 3: Print results
             company_name = result.get("company_name", "Unknown")

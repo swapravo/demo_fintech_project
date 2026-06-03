@@ -4,6 +4,7 @@ import base64
 import fitz  # PyMuPDF
 from dotenv import load_dotenv
 from llm import call_llm_json
+from config import LLM_MODEL
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,7 +34,7 @@ def pdf_to_base64_images(pdf_path: str) -> list[str]:
         
     return base64_images
 
-def evaluate_bank_account(pdf_path: str, model: str = "openai/gpt-4o") -> dict:
+def evaluate_bank_account(pdf_path: str, model: str = LLM_MODEL) -> dict:
     """
     Reads a bank statement PDF as images, feeds them to an LLM, 
     and returns a structured JSON with the financial tiers.

@@ -22,6 +22,7 @@ import json
 import os
 from dotenv import load_dotenv
 from llm import call_llm_json
+from config import LLM_MODEL
 
 # Load environment variables from .env file
 load_dotenv()
@@ -31,7 +32,7 @@ load_dotenv()
 from prompts import OFFER_LETTER_SYSTEM_PROMPT, OFFER_LETTER_USER_PROMPT_TEMPLATE
 
 
-def evaluate_offer_letter(offer_letter_text: str, model: str = "openai/gpt-4o") -> dict:
+def evaluate_offer_letter(offer_letter_text: str, model: str = LLM_MODEL) -> dict:
     """
     Evaluate an offer letter and return a dictionary with company_tier and salary_tier.
 
@@ -61,7 +62,7 @@ def evaluate_offer_letter(offer_letter_text: str, model: str = "openai/gpt-4o") 
     return call_llm_json(messages=messages, model=model, temperature=0.0)
 
 
-def evaluate_offer_letter_from_pdf(pdf_path: str, model: str = "openai/gpt-4o") -> dict:
+def evaluate_offer_letter_from_pdf(pdf_path: str, model: str = LLM_MODEL) -> dict:
     """
     Convenience wrapper: extracts text from a PDF using Docling, then evaluates it.
 

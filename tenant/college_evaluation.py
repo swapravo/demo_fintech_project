@@ -28,6 +28,7 @@ import os
 import sys
 from dotenv import load_dotenv
 from llm import call_llm_json
+from config import LLM_MODEL
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,7 +36,7 @@ load_dotenv()
 from prompts import COLLEGE_SYSTEM_PROMPT, COLLEGE_USER_PROMPT_TEMPLATE
 
 
-def evaluate_college(college_name: str, model: str = "openai/gpt-4o") -> dict:
+def evaluate_college(college_name: str, model: str = LLM_MODEL) -> dict:
     """
     Evaluate a college name and return a dictionary with college_tier, credibility_score, etc.
 

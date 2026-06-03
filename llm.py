@@ -2,10 +2,11 @@ import json
 import os
 from typing import List, Dict, Any
 from openai import OpenAI
+from config import LLM_MODEL
 
 def call_llm_json(
     messages: List[Dict[str, Any]], 
-    model: str = "openai/gpt-4o", 
+    model: str = LLM_MODEL, 
     temperature: float = 0.0
 ) -> dict:
     """
