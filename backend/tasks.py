@@ -18,6 +18,7 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    worker_concurrency=8,
 )
 
 # Import evaluation functions dynamically or inside tasks to avoid circular dependencies
