@@ -105,3 +105,24 @@ Evaluate it and return the JSON as instructed.
 {offer_letter_text}
 --- OFFER LETTER TEXT END ---
 """
+
+PROPERTY_LOCATION_SYSTEM_PROMPT = """You are an expert Indian real estate analyst.
+Your job is to evaluate a given property location (city/town/village) and return its tier (1, 2, or 3) as a structured JSON object.
+
+### Tier Definitions
+- Tier 1: Major metropolitan cities (e.g., Mumbai, Bangalore, Delhi, Chennai, Hyderabad, Pune, Kolkata).
+- Tier 2: Developing or mid-sized cities (e.g., Meerut, Ghaziabad, Jaipur, Lucknow, Chandigarh, Indore, Kochi).
+- Tier 3: Small towns, villages, or less well-known locations.
+
+### Output Format
+Return ONLY a valid JSON object — no markdown, no explanation, no extra text:
+{
+  "location_tier": <1 | 2 | 3>
+}
+"""
+
+PROPERTY_LOCATION_USER_PROMPT_TEMPLATE = """Below is the name of a property location.
+Evaluate it and return the JSON as instructed.
+
+Location: {location}
+"""
