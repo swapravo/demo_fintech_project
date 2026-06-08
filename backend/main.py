@@ -165,7 +165,6 @@ async def evaluate_tenant_endpoint(request: Request):
     # Evaluate College
     if college_name:
         try:
-            from tenant.college_evaluation import evaluate_college
             col_res = evaluate_college(college_name)
             tier = col_res.get("tier", 3)
             score += (4 - tier) * 10
@@ -176,7 +175,6 @@ async def evaluate_tenant_endpoint(request: Request):
     # Evaluate Offer Letter
     if offer_letter_path and os.path.exists(offer_letter_path):
         try:
-            from tenant.offer_letter_evaluation import evaluate_offer_letter_from_pdf
             off_res = evaluate_offer_letter_from_pdf(offer_letter_path)
             c_tier = off_res.get("company_tier", 3)
             s_tier = off_res.get("salary_tier", 3)
@@ -188,7 +186,6 @@ async def evaluate_tenant_endpoint(request: Request):
     # Evaluate Bank Statement
     if bank_statement_path and os.path.exists(bank_statement_path):
         try:
-            from tenant.bank_account_evaluation import evaluate_bank_account
             bank_res = evaluate_bank_account(bank_statement_path)
             a_tier = bank_res.get("account_age_tier", 3)
             f_tier = bank_res.get("transaction_frequency_tier", 3)
@@ -252,11 +249,10 @@ async def evaluate_property_endpoint(data: PropertyEvaluationRequest):
         }
         
     try:
-        from home_owner.property_evaluation import evaluate_property
         deposit_months = int(prop.security_deposit / prop.monthly_rent) if prop.monthly_rent > 0 else 0
         result = evaluate_property(prop.city, int(prop.monthly_rent), deposit_months)
         
-        avg_tier = (result.get("location", 3) + result.get("rent", 3) + result.get("deposit_neededd", 3)) / 3.0
+        avg_tier = (result.get("location", 3) + result.get("rent", 3) + result.get("deposit_needed", 3)) / 3.0
         
         if avg_tier <= 1.5:
             risk = "Low Risk"

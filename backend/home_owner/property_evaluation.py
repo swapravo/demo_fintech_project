@@ -68,5 +68,5 @@ def evaluate_property(location: str, rent: int, deposit: int) -> dict:
     return {
         "location": location_tier,
         "rent": rent_tier,
-        "deposit_neededd": deposit_tier
+        "deposit_needed": deposit_tier
     }
