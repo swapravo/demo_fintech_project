@@ -1,7 +1,7 @@
 import os
 import uuid
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from celery.result import AsyncResult
@@ -41,6 +41,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # API v1 Router for Onboarding & Auth Flows
 # ---------------------------------------------------------------------------
 api_v1 = APIRouter(prefix="/api/v1")
+
+# In-memory session tracking for MVP
+tenant_sessions = {}
+properties_db = {}
 
 class LoginRequest(BaseModel):
     email: str
@@ -97,10 +101,16 @@ async def verify_identity_endpoint(data: IdentityRequest):
 
 @api_v1.post("/evaluations/education")
 async def submit_education_endpoint(
+    request: Request,
     city: str = Form(...),
     college: str = Form(...),
     documents: Optional[List[UploadFile]] = File(None, alias="documents[]")
 ):
+    token = request.headers.get("Authorization", "default")
+    if token not in tenant_sessions:
+        tenant_sessions[token] = {}
+    tenant_sessions[token]["college"] = college
+
     if documents:
         for doc in documents:
             file_path = os.path.join(UPLOAD_DIR, f"edu_{uuid.uuid4()}_{doc.filename}")
@@ -110,33 +120,105 @@ async def submit_education_endpoint(
 
 @api_v1.post("/evaluations/offer-letter")
 async def submit_offer_letter_endpoint(
+    request: Request,
     offer_letter: UploadFile = File(...)
 ):
+    token = request.headers.get("Authorization", "default")
+    if token not in tenant_sessions:
+        tenant_sessions[token] = {}
+
     file_path = os.path.join(UPLOAD_DIR, f"offer_{uuid.uuid4()}_{offer_letter.filename}")
     with open(file_path, "wb") as f:
         f.write(await offer_letter.read())
+        
+    tenant_sessions[token]["offer_letter"] = file_path
     return {"status": "success"}
 
 @api_v1.post("/evaluations/bank-statement")
 async def submit_bank_statement_endpoint(
+    request: Request,
     bank_statement: UploadFile = File(...)
 ):
+    token = request.headers.get("Authorization", "default")
+    if token not in tenant_sessions:
+        tenant_sessions[token] = {}
+
     file_path = os.path.join(UPLOAD_DIR, f"bank_{uuid.uuid4()}_{bank_statement.filename}")
     with open(file_path, "wb") as f:
         f.write(await bank_statement.read())
+
+    tenant_sessions[token]["bank_statement"] = file_path
     return {"status": "success"}
 
 @api_v1.post("/evaluations/tenant")
-async def evaluate_tenant_endpoint():
+async def evaluate_tenant_endpoint(request: Request):
+    token = request.headers.get("Authorization", "default")
+    session = tenant_sessions.get(token, {})
+    
+    college_name = session.get("college")
+    offer_letter_path = session.get("offer_letter")
+    bank_statement_path = session.get("bank_statement")
+    
+    score = 0
+    tier_details = []
+    
+    # Evaluate College
+    if college_name:
+        try:
+            from tenant.college_evaluation import evaluate_college
+            col_res = evaluate_college(college_name)
+            tier = col_res.get("tier", 3)
+            score += (4 - tier) * 10
+            tier_details.append(f"College: Tier {tier}")
+        except Exception as e:
+            print("College evaluation failed:", e)
+            
+    # Evaluate Offer Letter
+    if offer_letter_path and os.path.exists(offer_letter_path):
+        try:
+            from tenant.offer_letter_evaluation import evaluate_offer_letter_from_pdf
+            off_res = evaluate_offer_letter_from_pdf(offer_letter_path)
+            c_tier = off_res.get("company_tier", 3)
+            s_tier = off_res.get("salary_tier", 3)
+            score += (4 - c_tier) * 10 + (4 - s_tier) * 10
+            tier_details.append(f"Company: Tier {c_tier}, Salary: Tier {s_tier}")
+        except Exception as e:
+            print("Offer letter evaluation failed:", e)
+            
+    # Evaluate Bank Statement
+    if bank_statement_path and os.path.exists(bank_statement_path):
+        try:
+            from tenant.bank_account_evaluation import evaluate_bank_account
+            bank_res = evaluate_bank_account(bank_statement_path)
+            a_tier = bank_res.get("account_age_tier", 3)
+            f_tier = bank_res.get("transaction_frequency_tier", 3)
+            v_tier = bank_res.get("total_volume_tier", 3)
+            score += (4 - a_tier) * 5 + (4 - f_tier) * 5 + (4 - v_tier) * 5
+            tier_details.append(f"Bank: {a_tier}/{f_tier}/{v_tier}")
+        except Exception as e:
+            print("Bank account evaluation failed:", e)
+            
+    final_score = min(100, max(20, score + 40)) # baseline 40
+    
+    if final_score >= 80:
+        final_tier = "Tier 1"
+    elif final_score >= 60:
+        final_tier = "Tier 2"
+    else:
+        final_tier = "Tier 3"
+        
+    summary = f"Evaluated based on provided documents. {', '.join(tier_details)}."
+    
     return {
-        "credibility_score": 85,
-        "tier": "Tier 1",
-        "summary": "Excellent financial profile. Stable banking transactions and offer letter from a highly credible institution."
+        "credibility_score": final_score,
+        "tier": final_tier,
+        "summary": summary
     }
 
 @api_v1.post("/properties")
 async def create_property_endpoint(data: PropertyRequest):
     property_id = f"prop_{uuid.uuid4().hex[:8]}"
+    properties_db[property_id] = data
     return {
         "id": property_id,
         "name": data.name
@@ -161,11 +243,46 @@ async def upload_property_photos_endpoint(
 
 @api_v1.post("/evaluations/property")
 async def evaluate_property_endpoint(data: PropertyEvaluationRequest):
-    return {
-        "risk_tier": "Low Risk",
-        "insurance_recommendation": "Standard Cover: RentShield Premium Plan recommended. Covers up to 6 months of rent.",
-        "suggested_premium": 1999
-    }
+    prop = properties_db.get(data.property_id)
+    if not prop:
+        return {
+            "risk_tier": "Unknown",
+            "insurance_recommendation": "Unable to evaluate. Property not found.",
+            "suggested_premium": 0
+        }
+        
+    try:
+        from home_owner.property_evaluation import evaluate_property
+        deposit_months = int(prop.security_deposit / prop.monthly_rent) if prop.monthly_rent > 0 else 0
+        result = evaluate_property(prop.city, int(prop.monthly_rent), deposit_months)
+        
+        avg_tier = (result.get("location", 3) + result.get("rent", 3) + result.get("deposit_neededd", 3)) / 3.0
+        
+        if avg_tier <= 1.5:
+            risk = "Low Risk"
+            premium = prop.monthly_rent * 0.05
+            rec = "Comprehensive Cover recommended."
+        elif avg_tier <= 2.5:
+            risk = "Moderate Risk"
+            premium = prop.monthly_rent * 0.08
+            rec = "Standard Cover recommended."
+        else:
+            risk = "High Risk"
+            premium = prop.monthly_rent * 0.12
+            rec = "Basic Cover recommended. Higher deposit requested."
+            
+        return {
+            "risk_tier": risk,
+            "insurance_recommendation": rec,
+            "suggested_premium": int(premium)
+        }
+    except Exception as e:
+        print("Property evaluation failed:", e)
+        return {
+            "risk_tier": "Evaluation Failed",
+            "insurance_recommendation": "Error occurred during evaluation.",
+            "suggested_premium": 0
+        }
 
 app.include_router(api_v1)
 
