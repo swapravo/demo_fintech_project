@@ -9,7 +9,7 @@ if project_root not in sys.path:
 
 from llm import call_llm_json
 from prompts import PROPERTY_LOCATION_SYSTEM_PROMPT, PROPERTY_LOCATION_USER_PROMPT_TEMPLATE
-from utils import ensure_env_vars
+from utils import ensure_env
 
 def evaluate_property(location: str, rent: int, deposit: int) -> dict:
     """
@@ -33,7 +33,7 @@ def evaluate_property(location: str, rent: int, deposit: int) -> dict:
     Returns:
         A dictionary with location, rent, and deposit tiers.
     """
-    ensure_env_vars(["OPENROUTER_API_KEY"])
+    ensure_env("OPENROUTER_API_KEY")
 
     # Evaluate Location Tier using LLM
     messages = [
