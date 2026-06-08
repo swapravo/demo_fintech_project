@@ -16,8 +16,8 @@ class TestPropertyEvaluation(unittest.TestCase):
         # Setup mock to return Tier 1 for location
         mock_call_llm_json.return_value = {"location_tier": 1}
         
-        # Test with > 50k rent (Tier 1) and <= 1 month deposit (Tier 1)
-        result = evaluate_property("Mumbai", 60000, 1)
+        # Test with < 15k rent (Tier 1) and <= 1 month deposit (Tier 1)
+        result = evaluate_property("Mumbai", 10000, 1)
         
         self.assertEqual(result["location"], 1)
         self.assertEqual(result["rent"], 1)
@@ -41,8 +41,8 @@ class TestPropertyEvaluation(unittest.TestCase):
     def test_evaluate_property_tier_3_all(self, mock_call_llm_json, mock_ensure_env):
         mock_call_llm_json.return_value = {"location_tier": 3}
         
-        # Test with < 15k rent (Tier 3) and > 3 months deposit (Tier 3)
-        result = evaluate_property("Village A", 10000, 4)
+        # Test with > 50k rent (Tier 3) and > 3 months deposit (Tier 3)
+        result = evaluate_property("Village A", 60000, 4)
         
         self.assertEqual(result["location"], 3)
         self.assertEqual(result["rent"], 3)
@@ -57,7 +57,7 @@ class TestPropertyEvaluation(unittest.TestCase):
         result = evaluate_property("Bangalore", 14000, 3)
         
         self.assertEqual(result["location"], 1)
-        self.assertEqual(result["rent"], 3)
+        self.assertEqual(result["rent"], 1)
         self.assertEqual(result["deposit_neededd"], 2)
 
     @patch('home_owner.property_evaluation.ensure_env')

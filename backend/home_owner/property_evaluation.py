@@ -21,9 +21,9 @@ def evaluate_property(location: str, rent: int, deposit: int) -> dict:
     - Tier 3: Small towns/villages
     
     Rent:
-    - < 15k -> Tier 3
+    - < 15k -> Tier 1
     - 15k - 50k -> Tier 2
-    - > 50k -> Tier 1
+    - > 50k -> Tier 3
     
     Deposit Needed:
     - 1 month -> Tier 1
@@ -51,11 +51,11 @@ def evaluate_property(location: str, rent: int, deposit: int) -> dict:
 
     # Evaluate Rent Tier
     if rent < 15000:
-        rent_tier = 3
+        rent_tier = 1
     elif 15000 <= rent <= 50000:
         rent_tier = 2
     else:
-        rent_tier = 1
+        rent_tier = 3
 
     # Evaluate Deposit Tier
     if deposit <= 1:
