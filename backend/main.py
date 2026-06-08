@@ -1,8 +1,14 @@
 import os
 import uuid
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
 from celery.result import AsyncResult
 from models import SubmitRequest, DocumentType
+
+# Import evaluation functions for testing endpoints
+from tenant.bank_account_evaluation import evaluate_bank_account
+from tenant.college_evaluation import evaluate_college
+from tenant.offer_letter_evaluation import evaluate_offer_letter_from_pdf
+from home_owner.property_evaluation import evaluate_property
 from tasks import (
     evaluate_bank_statement_task,
     evaluate_offer_letter_task,
@@ -110,3 +116,75 @@ async def get_task_status(task_id: str):
             response["error"] = str(result.result)
             
     return response
+
+# ---------------------------------------------------------------------------
+# Direct Testing Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/test/college")
+async def test_college(college_name: str = Form(...)):
+    """Synchronously test college evaluation."""
+    try:
+        result = evaluate_college(college_name)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/test/bank_statement")
+async def test_bank_statement(file: UploadFile = File(...)):
+    """Synchronously test bank statement evaluation."""
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Bank account statement must be a PDF file.")
+        
+    file_extension = ".pdf"
+    file_name = f"test_bank_statement_{uuid.uuid4()}{file_extension}"
+    file_path = os.path.abspath(os.path.join(UPLOAD_DIR, file_name))
+    
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        
+    try:
+        result = evaluate_bank_account(file_path)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+@app.post("/test/offer_letter")
+async def test_offer_letter(file: UploadFile = File(...)):
+    """Synchronously test offer letter evaluation."""
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Offer letter must be a PDF file.")
+        
+    file_extension = ".pdf"
+    file_name = f"test_offer_letter_{uuid.uuid4()}{file_extension}"
+    file_path = os.path.abspath(os.path.join(UPLOAD_DIR, file_name))
+    
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+        
+    try:
+        result = evaluate_offer_letter_from_pdf(file_path)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+@app.post("/test/property")
+async def test_property(
+    location: str = Form(..., description="E.g. Mumbai, Bangalore, Meerut"), 
+    rent: int = Form(..., description="Monthly rent amount"), 
+    deposit: int = Form(..., description="Number of months of deposit needed")
+):
+    """Synchronously test property evaluation."""
+    try:
+        result = evaluate_property(location, rent, deposit)
+        return {"status": "success", "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
