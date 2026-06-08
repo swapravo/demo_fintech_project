@@ -12,6 +12,8 @@ from tasks import (
 
 app = FastAPI(title="Fintech Demo App with Celery")
 
+from home_owner.property_state_evaluation import router as home_owner_router
+app.include_router(home_owner_router)
 # Ensure uploads directory exists
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
