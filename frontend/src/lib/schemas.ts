@@ -25,9 +25,14 @@ export const identitySchema = z.object({
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/, 'Invalid PAN format (e.g. ABCDE1234F)'),
   aadhaar_number: z
     .string()
-    .min(12, 'Aadhaar number must be 12 digits')
-    .max(12, 'Aadhaar number must be 12 digits')
-    .regex(/^\d{12}$/, 'Aadhaar must contain only 12 digits'),
+    .transform((val) => val.replace(/\s+/g, ''))
+    .pipe(
+      z
+        .string()
+        .min(12, 'Aadhaar number must be 12 digits')
+        .max(12, 'Aadhaar number must be 12 digits')
+        .regex(/^\d{12}$/, 'Aadhaar must contain only 12 digits')
+    ),
 });
 
 export const educationSchema = z.object({

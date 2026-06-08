@@ -13,6 +13,15 @@ import { InlineError } from '@/components/error-state';
 import { Spinner } from '@/components/loading-state';
 import { cn } from '@/lib/utils';
 
+const formatAadhaar = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  const parts = [];
+  for (let i = 0; i < digits.length && i < 12; i += 4) {
+    parts.push(digits.substring(i, i + 4));
+  }
+  return parts.join(' ');
+};
+
 interface Props { onNext: () => void; }
 
 export function IdentityStep({ onNext }: Props) {
@@ -90,7 +99,6 @@ export function IdentityStep({ onNext }: Props) {
             />
             <InlineError message={errors.pan_number?.message} />
           </div>
-
           {/* Aadhaar */}
           <div>
             <label htmlFor="aadhaar-number" className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -100,9 +108,13 @@ export function IdentityStep({ onNext }: Props) {
               id="aadhaar-number"
               type="text"
               inputMode="numeric"
-              placeholder="12-digit Aadhaar number"
-              maxLength={12}
-              {...register('aadhaar_number')}
+              placeholder="XXXX XXXX XXXX"
+              maxLength={14}
+              {...register('aadhaar_number', {
+                onChange: (e) => {
+                  e.target.value = formatAadhaar(e.target.value);
+                },
+              })}
               className={cn(
                 'w-full px-3.5 py-2.5 rounded-xl border text-sm text-[#111827] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB] transition-all',
                 errors.aadhaar_number ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'
