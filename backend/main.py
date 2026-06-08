@@ -1,6 +1,9 @@
 import os
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form
+from typing import List, Optional
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from celery.result import AsyncResult
 from models import SubmitRequest, DocumentType
 
@@ -18,11 +21,153 @@ from tasks import (
 
 app = FastAPI(title="Fintech Demo App with Celery")
 
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 from home_owner.property_state_evaluation import router as home_owner_router
 app.include_router(home_owner_router)
+
 # Ensure uploads directory exists
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# ---------------------------------------------------------------------------
+# API v1 Router for Onboarding & Auth Flows
+# ---------------------------------------------------------------------------
+api_v1 = APIRouter(prefix="/api/v1")
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class RoleRequest(BaseModel):
+    role: str
+
+class IdentityRequest(BaseModel):
+    pan_number: str
+    aadhaar_number: str
+
+class PropertyRequest(BaseModel):
+    name: str
+    address: str
+    city: str
+    monthly_rent: float
+    security_deposit: float
+
+class PropertyEvaluationRequest(BaseModel):
+    property_id: str
+
+@api_v1.post("/auth/register")
+async def register_endpoint(data: RegisterRequest):
+    return {
+        "access_token": f"mock_token_register_{uuid.uuid4().hex[:8]}",
+        "token_type": "bearer"
+    }
+
+@api_v1.post("/auth/login")
+async def login_endpoint(data: LoginRequest):
+    return {
+        "access_token": f"mock_token_login_{uuid.uuid4().hex[:8]}",
+        "token_type": "bearer"
+    }
+
+@api_v1.post("/users/role")
+async def set_role_endpoint(data: RoleRequest):
+    if data.role not in ["tenant", "home_owner"]:
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'tenant' or 'home_owner'.")
+    return {"status": "success", "role": data.role}
+
+@api_v1.post("/verify/identity")
+async def verify_identity_endpoint(data: IdentityRequest):
+    return {
+        "status": "success",
+        "message": "Identity verification successful."
+    }
+
+@api_v1.post("/evaluations/education")
+async def submit_education_endpoint(
+    city: str = Form(...),
+    college: str = Form(...),
+    documents: Optional[List[UploadFile]] = File(None, alias="documents[]")
+):
+    if documents:
+        for doc in documents:
+            file_path = os.path.join(UPLOAD_DIR, f"edu_{uuid.uuid4()}_{doc.filename}")
+            with open(file_path, "wb") as f:
+                f.write(await doc.read())
+    return {"status": "success", "city": city, "college": college}
+
+@api_v1.post("/evaluations/offer-letter")
+async def submit_offer_letter_endpoint(
+    offer_letter: UploadFile = File(...)
+):
+    file_path = os.path.join(UPLOAD_DIR, f"offer_{uuid.uuid4()}_{offer_letter.filename}")
+    with open(file_path, "wb") as f:
+        f.write(await offer_letter.read())
+    return {"status": "success"}
+
+@api_v1.post("/evaluations/bank-statement")
+async def submit_bank_statement_endpoint(
+    bank_statement: UploadFile = File(...)
+):
+    file_path = os.path.join(UPLOAD_DIR, f"bank_{uuid.uuid4()}_{bank_statement.filename}")
+    with open(file_path, "wb") as f:
+        f.write(await bank_statement.read())
+    return {"status": "success"}
+
+@api_v1.post("/evaluations/tenant")
+async def evaluate_tenant_endpoint():
+    return {
+        "credibility_score": 85,
+        "tier": "Tier 1",
+        "summary": "Excellent financial profile. Stable banking transactions and offer letter from a highly credible institution."
+    }
+
+@api_v1.post("/properties")
+async def create_property_endpoint(data: PropertyRequest):
+    property_id = f"prop_{uuid.uuid4().hex[:8]}"
+    return {
+        "id": property_id,
+        "name": data.name
+    }
+
+@api_v1.post("/properties/{property_id}/photos")
+async def upload_property_photos_endpoint(
+    property_id: str,
+    before_photos: List[UploadFile] = File(..., alias="before_photos[]"),
+    after_photos: Optional[List[UploadFile]] = File(None, alias="after_photos[]")
+):
+    for photo in before_photos:
+        file_path = os.path.join(UPLOAD_DIR, f"before_{property_id}_{uuid.uuid4()}_{photo.filename}")
+        with open(file_path, "wb") as f:
+            f.write(await photo.read())
+    if after_photos:
+        for photo in after_photos:
+            file_path = os.path.join(UPLOAD_DIR, f"after_{property_id}_{uuid.uuid4()}_{photo.filename}")
+            with open(file_path, "wb") as f:
+                f.write(await photo.read())
+    return {"status": "success"}
+
+@api_v1.post("/evaluations/property")
+async def evaluate_property_endpoint(data: PropertyEvaluationRequest):
+    return {
+        "risk_tier": "Low Risk",
+        "insurance_recommendation": "Standard Cover: RentShield Premium Plan recommended. Covers up to 6 months of rent.",
+        "suggested_premium": 1999
+    }
+
+app.include_router(api_v1)
 
 @app.post("/submit")
 async def submit_document(data: SubmitRequest = Depends()):

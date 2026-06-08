@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, CheckCircle2, ShieldCheck, Home as HomeIcon, Banknote, Clock, FileCheck, Shield, Users } from "lucide-react";
 
+// Auth routes: /auth/login, /auth/signup
+// Onboarding: /onboarding/role → /onboarding/tenant | /onboarding/home-owner
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-white text-slate-900 selection:bg-blue-100 font-sans">
@@ -14,10 +17,10 @@ export default function Home() {
             <span className="font-bold text-xl tracking-tight text-slate-900">RentShield</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/landlord" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-              For Landlords
+            <Link href="/auth/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              Sign in
             </Link>
-            <Link href="/renter">
+            <Link href="/auth/signup">
               <Button className="bg-slate-900 text-white hover:bg-slate-800">
                 Get Started
               </Button>
@@ -36,12 +39,12 @@ export default function Home() {
             Replace large rental deposits with a simple monthly plan while keeping landlords protected.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/renter" className="w-full sm:w-auto">
+            <Link href="/auth/signup" className="w-full sm:w-auto">
               <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm hover:shadow-md transition-all">
                 I'm Looking to Rent
               </Button>
             </Link>
-            <Link href="/landlord" className="w-full sm:w-auto">
+            <Link href="/auth/signup" className="w-full sm:w-auto">
               <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 border-slate-200 hover:bg-slate-50 text-slate-900 rounded-xl transition-all">
                 I Own Property
               </Button>
@@ -290,12 +293,12 @@ export default function Home() {
             </span>
             <h2 className="text-4xl font-bold mb-8">Join the Early Access Program</h2>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/renter" className="w-full sm:w-auto">
+              <Link href="/auth/signup" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto text-lg h-14 px-8 bg-white text-blue-600 hover:bg-slate-50 rounded-xl">
                   I'm a Renter
                 </Button>
               </Link>
-              <Link href="/landlord" className="w-full sm:w-auto">
+              <Link href="/auth/signup" className="w-full sm:w-auto">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg h-14 px-8 border-blue-400 text-white hover:bg-blue-500/50 rounded-xl">
                   I'm a Landlord
                 </Button>
